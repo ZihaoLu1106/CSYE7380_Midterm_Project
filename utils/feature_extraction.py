@@ -1,20 +1,34 @@
-import tensorflow as tf
-from tensorflow.keras.applications import DenseNet121
-from tensorflow.keras.applications.densenet import preprocess_input
-from tensorflow.keras.preprocessing import image
-import numpy as np
+import torch
+from torchvision import models, transforms
+from PIL import Image
 
 # Initialize DenseNet model (pre-trained on ImageNet)
 def initialize_densenet():
-    densenet = DenseNet121(weights='imagenet', include_top=False, pooling='avg')
-    return densenet
+    model = models.densenet121(pretrained=True)
+    model.eval()  # Set the model to evaluation mode
+    return model
+def get_preprocess():
+    preprocess = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    return preprocess
 
 # Extract DenseNet features
-def extract_features(img_path, densenet_model):
-    img = image.load_img(img_path, target_size=(224, 224))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
-
-    features = densenet_model.predict(img_array)
-    return features
+def extract_features(img_path, densenet_model,preprocess, device):
+    
+    img = Image.open(img_path)
+    
+    # Preprocess the image
+    img_t = preprocess(img)
+    
+    # Create a mini-batch as expected by the model
+    batch_t = torch.unsqueeze(img_t, 0).to(device)
+    
+    # Extract features
+    with torch.no_grad():  # Disable gradient calculation
+        features = densenet_model(batch_t)
+    print("Features extracted successfully!")
+    return features.cpu().numpy()

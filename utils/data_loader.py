@@ -22,7 +22,7 @@ def build_vocab(captions):
 
 def load_image_paths_and_captions(images_folder, captions_file):
     captions_dict = {}
-    with open(captions_file, 'r') as file:
+    with open(captions_file, 'r',encoding='utf-8') as file:
         next(file)  # Skip header
         for line in file:
             img_file, caption = line.split(',', 1)

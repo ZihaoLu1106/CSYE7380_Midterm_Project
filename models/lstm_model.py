@@ -1,21 +1,24 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Embedding, LSTM, Dense, Input
+from tensorflow.keras.layers import Embedding, LSTM, Dense, Input,Add
+from tensorflow.keras import layers, models
 
-def build_lstm_model(vocab_size, embedding_dim, units):
+def build_lstm_model(vocab_size, embedding_dim, units):#embedding_dim 256 units 512
     image_input = Input(shape=(2048,))
-    caption_input = Input(shape=(None,))
-
+    x1 = layers.Dense(embedding_dim, activation='relu')(image_input)
+    x1 = layers.RepeatVector(1)(x1)
     # Image feature embedding
-    image_features = Dense(embedding_dim)(image_input)
+    caption_input = layers.Input(shape=(None,))
+    x2 = layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)(caption_input)
+    x2 = layers.LSTM(units, return_sequences=True)(x2)
 
-    # Caption embedding
-    caption_embedding = Embedding(vocab_size, embedding_dim)(caption_input)
-    caption_lstm = LSTM(units)(caption_embedding)
+    decoder = layers.concatenate([x1, x2], axis=1)
+    decoder = layers.LSTM(units, return_sequences=True)(decoder)
 
-    # Combine image and caption features
-    combined = tf.keras.layers.Add()([image_features, caption_lstm])
-    output = Dense(vocab_size, activation='softmax')(combined)
+    # Output layer
+    outputs = layers.TimeDistributed(layers.Dense(vocab_size, activation='softmax'))(decoder)
 
-    model = Model(inputs=[image_input, caption_input], outputs=output)
+    # Create the model
+    model = models.Model(inputs=[image_input, caption_input], outputs=outputs)
+
     return model
